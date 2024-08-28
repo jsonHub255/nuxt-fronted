@@ -51,20 +51,36 @@
         </span>
       </div>
 
-      <!-- Product details section -->
-      <div v-if="product">
-        <h3>Product Details</h3>
-        <p>Name: {{ product.name }}</p>
-        <p>Category: {{ product.category }}</p>
-        <p>Brand: {{ product.brand }}</p>
-        <p>SKU: {{ product.sku }}</p>
-        <!-- Add more product details as needed -->
-      </div>
-
-      <!-- OrderItemUsage fields (initially hidden) -->
+      <!-- OrderItemUsage fields -->
       <div v-if="orderItemUsageVisible" class="form-field">
-        <label for="totalUnitsUsed">Total Units Used:</label>
-        <input v-model="orderItemUsage.total_units_used" type="number" id="totalUnitsUsed" class="form-input" />
+        <h3>Order Item Usages</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Order Item</th>
+              <th>Total Units Used</th>
+              <th>Usage Type</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(usage, index) in orderItemUsages" :key="index">
+              <td>
+                <InputText v-model="usage.orderItem.name" readonly />
+              </td>
+              <td>
+                <InputNumber v-model="usage.total_units_used" />
+              </td>
+              <td>
+                <InputText v-model="usage.usageType" readonly />
+              </td>
+              <td>
+                <Button icon="pi pi-trash" class="p-button-danger" @click="removeOrderItemUsage(index)" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <Button label="Add another Order Item usage" class="p-button-secondary" @click="addOrderItemUsage" />
       </div>
 
       <div class="form-actions">
@@ -94,29 +110,40 @@ export default {
       description: '',
       product: null,
       orderItemUsageVisible: false,
-      orderItemUsage: {
-        total_units_used: null,
-      },
+      orderItemUsages: [],
     };
   },
   methods: {
     async onBarcodeDetected(ean13) {
-  try {
-    const baseUrl = 'https://calm-refuge-29022-6081e5df5b91.herokuapp.com/api/v1';
-    console.log('API base URL:', baseUrl);  // Debugging log
-    if (!baseUrl) {
-      console.error('API base URL is not defined');
-      return;
-    }
-    const response = await axios.get(`${baseUrl}/product-detail/${ean13}/`);
-    this.product = response.data;
-    this.orderItemUsageVisible = true; // Show hidden fields when product is found
-  } catch (error) {
-    console.error('Error fetching product details:', error);
-    alert('Product not found.');
-  }
-},
+      try {
+        const baseUrl = 'https://calm-refuge-29022-6081e5df5b91.herokuapp.com/api/v1';
+        const response = await axios.get(`${baseUrl}/product-detail/${ean13}/`);
+        this.product = response.data;
 
+        // Automatically populate the OrderItemUsages with the detected product
+        this.orderItemUsageVisible = true;
+        this.orderItemUsages.push({
+          orderItem: this.product,
+          total_units_used: null,
+          usageType: 'total_units',
+        });
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+        alert('Product not found.');
+      }
+    },
+    addOrderItemUsage() {
+      // Add an empty usage object when the button is clicked
+      this.orderItemUsages.push({
+        orderItem: {}, // Empty object for a new order item usage
+        total_units_used: null,
+        usageType: 'total_units',
+      });
+    },
+    removeOrderItemUsage(index) {
+      // Remove the order item usage at the specified index
+      this.orderItemUsages.splice(index, 1);
+    },
     async submitReparation() {
       const reparationData = {
         reparation_number: this.reparationNumber,
@@ -125,11 +152,11 @@ export default {
         location: this.location,
         odometer_reading: this.odometerReading,
         description: this.description,
-        order_item_usages_write: [{
-          sku: this.product.sku,
-          usage_type: 'total_units', // or 'quantity', depending on your model
-          total_units_used: this.orderItemUsage.total_units_used,
-        }],
+        order_item_usages_write: this.orderItemUsages.map(usage => ({
+          sku: usage.orderItem.sku,
+          usage_type: usage.usageType,
+          total_units_used: usage.total_units_used,
+        })),
       };
 
       try {
@@ -150,13 +177,19 @@ export default {
       this.description = '';
       this.product = null;
       this.orderItemUsageVisible = false;
-      this.orderItemUsage = {
-        total_units_used: null,
-      };
-    }
+      this.orderItemUsages = [];
+    },
   },
 };
 </script>
+
+<style scoped>
+/* Your existing styles */
+</style>
+
+<style scoped>
+/* Your existing styles */
+</style>
 
 
 <style scoped>
