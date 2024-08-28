@@ -1,44 +1,59 @@
 <template>
   <div class="reparation-form-container">
+    <div class="form-header">
+      <h2 class="header-title">Add Reparation</h2>
+      <button @click="$emit('close')" class="close-button">&times;</button>
+    </div>
     <form @submit.prevent="submitReparation" class="reparation-form">
-      <h2 class="form-title">Add Reparation</h2>
+      <!-- Barcode Scanner -->
+      <BarcodeScanner @barcode-detected="onBarcodeDetected" />
 
+      <!-- Form fields -->
       <div class="form-field">
-        <label for="reparationNumber">Reparation Number</label>
-        <InputText v-model="reparationNumber" id="reparationNumber" class="form-input" required />
-      </div>
-
-      <!-- Barcode Scanner Component -->
-      <BarcodeScanner @barcode-scanned="handleBarcodeScanned" />
-
-      <div class="form-field">
-        <label for="vehicle">Vehicle</label>
-        <InputText v-model="vehicle" id="vehicle" class="form-input" required />
+        <span class="p-float-label">
+          <InputText v-model="reparationNumber" id="reparationNumber" class="form-input" required />
+          <label for="reparationNumber">Reparation Number</label>
+        </span>
       </div>
 
       <div class="form-field">
-        <label for="driver">Driver</label>
-        <InputText v-model="driver" id="driver" class="form-input" required />
+        <span class="p-float-label">
+          <InputText v-model="vehicle" id="vehicle" class="form-input" required />
+          <label for="vehicle">Vehicle</label>
+        </span>
       </div>
 
       <div class="form-field">
-        <label for="location">Location</label>
-        <InputText v-model="location" id="location" class="form-input" required />
+        <span class="p-float-label">
+          <InputText v-model="driver" id="driver" class="form-input" required />
+          <label for="driver">Driver</label>
+        </span>
       </div>
 
       <div class="form-field">
-        <label for="odometerReading">Odometer Reading</label>
-        <InputText v-model="odometerReading" id="odometerReading" class="form-input" type="number" required />
+        <span class="p-float-label">
+          <InputText v-model="location" id="location" class="form-input" required />
+          <label for="location">Location</label>
+        </span>
       </div>
 
       <div class="form-field">
-        <label for="description">Description</label>
-        <Textarea v-model="description" id="description" class="form-input" />
+        <span class="p-float-label">
+          <InputNumber v-model="odometerReading" id="odometerReading" class="form-input" required />
+          <label for="odometerReading">Odometer Reading</label>
+        </span>
+      </div>
+
+      <div class="form-field">
+        <span class="p-float-label">
+          <Textarea v-model="description" id="description" class="form-input" rows="3" autoResize />
+          <label for="description">Description</label>
+        </span>
       </div>
 
       <div class="form-actions">
-        <Button label="Submit" type="submit" class="form-button" />
-        <Button label="Close" type="button" @click="$emit('close')" class="form-button" />
+        <Button label="Submit" type="submit" class="p-button-raised submit-button" />
+        <Button label="Close" type="button" @click="$emit('close')" class="p-button-text cancel-button" />
       </div>
     </form>
   </div>
@@ -47,16 +62,11 @@
 <script>
 import { useReparationManagementStore } from '@/stores/reparationManagement';
 import BarcodeScanner from '@/components/shared/BarcodeScanner.vue';
-import InputText from 'primevue/inputtext';
-import Button from 'primevue/button';
-import Textarea from 'primevue/textarea';
+
 
 export default {
   components: {
     BarcodeScanner,
-    InputText,
-    Button,
-    Textarea,
   },
   data() {
     return {
@@ -64,11 +74,15 @@ export default {
       vehicle: '',
       driver: '',
       location: '',
-      odometerReading: '',
+      odometerReading: null,
       description: '',
     };
   },
   methods: {
+    onBarcodeDetected(code) {
+      // Populate the reparation number with the scanned barcode
+      this.reparationNumber = code;
+    },
     async submitReparation() {
       const reparationData = {
         reparation_number: this.reparationNumber,
@@ -88,16 +102,12 @@ export default {
         console.error('Failed to submit reparation:', error);
       }
     },
-    handleBarcodeScanned(scannedCode) {
-      const reparationStore = useReparationManagementStore();
-      reparationStore.scanAndAddProduct(scannedCode);
-    },
     clearForm() {
       this.reparationNumber = '';
       this.vehicle = '';
       this.driver = '';
       this.location = '';
-      this.odometerReading = '';
+      this.odometerReading = null;
       this.description = '';
     }
   },
@@ -106,52 +116,130 @@ export default {
 
 <style scoped>
 .reparation-form-container {
-  background: radial-gradient(circle at left top, var(--p-primary-400), var(--p-primary-700));
-  padding: 20px;
-  border-radius: 20px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.form-header {
+  background: linear-gradient(135deg, #3498db, #1abc9c);
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title {
+  color: white;
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 }
 
 .reparation-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.form-title {
-  text-align: center;
-  font-size: 1.5rem;
-  color: var(--p-primary-50);
+  padding: 30px;
 }
 
 .form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  margin-bottom: 28px;
+  width: 100%;
 }
 
-.form-input {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  padding: 10px;
-  color: var(--p-primary-50);
+:deep(.form-input) {
+  width: 100%;
+}
+
+:deep(.p-inputtext),
+:deep(.p-inputnumber-input),
+:deep(.p-inputtextarea) {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  transition: all 0.3s;
+  background-color: #f8f9fa;
+}
+
+:deep(.p-inputtext:focus),
+:deep(.p-inputnumber-input:focus),
+:deep(.p-inputtextarea:focus) {
+  outline: none;
+  border-color: #1abc9c;
+  box-shadow: 0 0 0 2px rgba(26, 188, 156, 0.2);
+}
+
+:deep(.p-float-label) {
+  margin-top: 6px;
+}
+
+:deep(.p-float-label label) {
+  background-color: transparent;
+  color: #7f8c8d;
+  padding: 0 4px;
+  margin-left: -4px;
+  transition: all 0.3s;
+}
+
+:deep(.p-float-label input:focus ~ label),
+:deep(.p-float-label input.p-filled ~ label),
+:deep(.p-float-label textarea:focus ~ label),
+:deep(.p-float-label textarea.p-filled ~ label) {
+  top: -0.75rem;
+  font-size: 12px;
+  color: #1abc9c;
 }
 
 .form-actions {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 40px;
 }
 
-.form-button {
-  background-color: var(--p-primary-50);
-  color: var(--p-primary-700);
+:deep(.submit-button),
+:deep(.cancel-button) {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+:deep(.submit-button) {
+  background: linear-gradient(135deg, #3498db, #1abc9c);
   border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  flex: 1;
+  color: white;
+  border-radius: 4px;
+  transition: all 0.3s;
 }
 
-.form-button:hover {
-  background-color: var(--p-primary-200);
+:deep(.submit-button:hover) {
+  background: linear-gradient(135deg, #2980b9, #16a085);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+:deep(.cancel-button) {
+  color: #7f8c8d;
+  background-color: transparent;
+  border: 1px solid #7f8c8d;
+  border-radius: 4px;
+}
+
+:deep(.cancel-button:hover) {
+  background-color: #ecf0f1;
+  color: #34495e;
 }
 </style>

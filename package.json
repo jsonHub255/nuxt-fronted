@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@ericblade/quagga2": "^1.8.4",
     "@primevue/nuxt-module": "^4.0.5",
     "@primevue/themes": "^4.0.5",
     "axios": "^1.7.5",
