@@ -1,18 +1,23 @@
 export default defineNuxtConfig({
   modules: [
-    // '@pinia/nuxt',
-    '@primevue/nuxt-module',
+    'nuxt-primevue'
   ],
   primevue: {
-    theme: 'saga-blue', // Use a valid theme name
-    ripple: true, // Enable ripple effect if needed
-    components: ['Menubar', ],
+    components: {
+      include: ['Button', 'InputText', 'InputNumber', 'AutoComplete']
+    },
+    directives: {
+      include: ['Tooltip', 'Ripple']
+    },
   },
   css: [
-    'primevue/resources/primevue.min.css', // PrimeVue core CSS
-    'primevue/resources/themes/saga-blue/theme.css', // Theme CSS (replace with your chosen theme)
-    'primeicons/primeicons.css', // PrimeIcons CSS
+    'primevue/resources/themes/lara-light-blue/theme.css',
+    'primevue/resources/primevue.css',
+    'primeicons/primeicons.css',
   ],
+  build: {
+    transpile: ['primevue']
+  },
   axios: {
     baseURL: process.env.NUXT_PUBLIC_API_BASE_URL,
   },
