@@ -51,6 +51,22 @@
         </span>
       </div>
 
+      <!-- Product details section -->
+      <div v-if="product">
+        <h3>Product Details</h3>
+        <p>Name: {{ product.name }}</p>
+        <p>Category: {{ product.category }}</p>
+        <p>Brand: {{ product.brand }}</p>
+        <p>SKU: {{ product.sku }}</p>
+        <!-- Add more product details as needed -->
+      </div>
+
+      <!-- OrderItemUsage fields (initially hidden) -->
+      <div v-if="orderItemUsageVisible" class="form-field">
+        <label for="totalUnitsUsed">Total Units Used:</label>
+        <input v-model="orderItemUsage.total_units_used" type="number" id="totalUnitsUsed" class="form-input" />
+      </div>
+
       <div class="form-actions">
         <Button label="Submit" type="submit" class="p-button-raised submit-button" />
         <Button label="Close" type="button" @click="$emit('close')" class="p-button-text cancel-button" />
@@ -62,7 +78,7 @@
 <script>
 import { useReparationManagementStore } from '@/stores/reparationManagement';
 import BarcodeScanner from '@/components/shared/BarcodeScanner.vue';
-
+import axios from 'axios';
 
 export default {
   components: {
@@ -76,13 +92,31 @@ export default {
       location: '',
       odometerReading: null,
       description: '',
+      product: null,
+      orderItemUsageVisible: false,
+      orderItemUsage: {
+        total_units_used: null,
+      },
     };
   },
   methods: {
-    onBarcodeDetected(code) {
-      // Populate the reparation number with the scanned barcode
-      this.reparationNumber = code;
-    },
+    async onBarcodeDetected(ean13) {
+  try {
+    const baseUrl = 'https://calm-refuge-29022-6081e5df5b91.herokuapp.com/api/v1';
+    console.log('API base URL:', baseUrl);  // Debugging log
+    if (!baseUrl) {
+      console.error('API base URL is not defined');
+      return;
+    }
+    const response = await axios.get(`${baseUrl}/product-detail/${ean13}/`);
+    this.product = response.data;
+    this.orderItemUsageVisible = true; // Show hidden fields when product is found
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    alert('Product not found.');
+  }
+},
+
     async submitReparation() {
       const reparationData = {
         reparation_number: this.reparationNumber,
@@ -91,6 +125,11 @@ export default {
         location: this.location,
         odometer_reading: this.odometerReading,
         description: this.description,
+        order_item_usages_write: [{
+          sku: this.product.sku,
+          usage_type: 'total_units', // or 'quantity', depending on your model
+          total_units_used: this.orderItemUsage.total_units_used,
+        }],
       };
 
       try {
@@ -109,10 +148,16 @@ export default {
       this.location = '';
       this.odometerReading = null;
       this.description = '';
+      this.product = null;
+      this.orderItemUsageVisible = false;
+      this.orderItemUsage = {
+        total_units_used: null,
+      };
     }
   },
 };
 </script>
+
 
 <style scoped>
 .reparation-form-container {
