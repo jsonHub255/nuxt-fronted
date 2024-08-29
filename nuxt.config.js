@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   ],
   primevue: {
     components: {
-      include: ['Button', 'InputText', 'InputNumber', 'AutoComplete']
+      include: ['Button', 'InputText', 'InputNumber', 'AutoComplete', 'Dropdown', 'Textarea']
     },
     directives: {
       include: ['Tooltip', 'Ripple']
@@ -18,8 +18,10 @@ export default defineNuxtConfig({
   build: {
     transpile: ['primevue']
   },
-  axios: {
-    baseURL: process.env.NUXT_PUBLIC_API_BASE_URL,
+  runtimeConfig: {
+    public: {
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL
+    }
   },
   compatibilityDate: "2024-08-26",
 });
