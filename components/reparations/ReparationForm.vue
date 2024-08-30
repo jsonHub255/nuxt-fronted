@@ -29,7 +29,7 @@
             :virtualScrollerOptions="{ 
               itemSize: 38, 
               lazy: true, 
-              onLazyLoad: onLazyLoad, 
+              onLazyLoad: onVehicleLazyLoad, 
               loading: vehicleStore.loading,
               delay: 250
             }"
@@ -55,14 +55,74 @@
 
       <div class="form-field">
         <span class="p-float-label">
-          <InputText v-model="driver" id="driver" class="form-input" required />
+          <Dropdown
+            v-model="selectedDriver"
+            :options="driverStore.drivers"
+            optionLabel="label"
+            :filter="true"
+            :showClear="true"
+            placeholder="Select a Driver"
+            @filter="onDriverFilter"
+            :virtualScrollerOptions="{ 
+              itemSize: 38, 
+              lazy: true, 
+              onLazyLoad: onDriverLazyLoad, 
+              loading: driverStore.loading,
+              delay: 250
+            }"
+            class="w-full driver-dropdown"
+          >
+            <template #value="slotProps">
+              <div class="driver-option selected" v-if="slotProps.value">
+                {{ slotProps.value.label }}
+              </div>
+              <span v-else>
+                {{ slotProps.placeholder }}
+              </span>
+            </template>
+            <template #option="slotProps">
+              <div class="driver-option">
+                {{ slotProps.option.label }}
+              </div>
+            </template>
+          </Dropdown>
           <label for="driver">Driver</label>
         </span>
       </div>
 
       <div class="form-field">
         <span class="p-float-label">
-          <InputText v-model="location" id="location" class="form-input" required />
+          <Dropdown
+            v-model="selectedLocation"
+            :options="locationStore.locations"
+            optionLabel="label"
+            :filter="true"
+            :showClear="true"
+            placeholder="Select a Location"
+            @filter="onLocationFilter"
+            :virtualScrollerOptions="{ 
+              itemSize: 38, 
+              lazy: true, 
+              onLazyLoad: onLocationLazyLoad, 
+              loading: locationStore.loading,
+              delay: 250
+            }"
+            class="w-full location-dropdown"
+          >
+            <template #value="slotProps">
+              <div class="location-option selected" v-if="slotProps.value">
+                {{ slotProps.value.label }}
+              </div>
+              <span v-else>
+                {{ slotProps.placeholder }}
+              </span>
+            </template>
+            <template #option="slotProps">
+              <div class="location-option">
+                {{ slotProps.option.label }}
+              </div>
+            </template>
+          </Dropdown>
           <label for="location">Location</label>
         </span>
       </div>
@@ -125,6 +185,8 @@
 import { ref, onMounted } from 'vue';
 import { useReparationManagementStore } from '@/stores/reparationManagement';
 import { useVehicleStore } from '@/stores/vehicleStore';
+import { useDriverStore } from '@/stores/driverStore';
+import { useLocationStore } from '@/stores/locationStore';
 import BarcodeScanner from '@/components/shared/BarcodeScanner.vue';
 import axios from 'axios';
 
@@ -137,8 +199,8 @@ export default {
   setup() {
     const reparationNumber = ref('');
     const selectedVehicle = ref(null);
-    const driver = ref('');
-    const location = ref('');
+    const selectedDriver = ref(null);
+    const selectedLocation = ref(null);
     const odometerReading = ref(null);
     const description = ref('');
     const product = ref(null);
@@ -146,23 +208,55 @@ export default {
     const orderItemUsages = ref([]);
 
     const vehicleStore = useVehicleStore();
+    const driverStore = useDriverStore();
+    const locationStore = useLocationStore();
     const reparationStore = useReparationManagementStore();
 
     onMounted(async () => {
       await vehicleStore.fetchVehicles();
+      await driverStore.fetchDrivers();
+      await locationStore.fetchLocations();
     });
 
     const onVehicleFilter = async (event) => {
-      console.log("Filter event:", event);
+      console.log("Vehicle filter event:", event);
       if (event.filter !== undefined) {
         await vehicleStore.searchVehicles(event.filter);
       }
     };
 
-    const onLazyLoad = async (event) => {
-      console.log("Lazy load event:", event);
+    const onVehicleLazyLoad = async (event) => {
+      console.log("Vehicle lazy load event:", event);
       if (vehicleStore.nextPage) {
         await vehicleStore.loadMoreVehicles();
+      }
+    };
+
+    const onDriverFilter = async (event) => {
+      console.log("Driver filter event:", event);
+      if (event.filter !== undefined) {
+        await driverStore.searchDrivers(event.filter);
+      }
+    };
+
+    const onDriverLazyLoad = async (event) => {
+      console.log("Driver lazy load event:", event);
+      if (driverStore.nextPage) {
+        await driverStore.loadMoreDrivers();
+      }
+    };
+
+    const onLocationFilter = async (event) => {
+      console.log("Location filter event:", event);
+      if (event.filter !== undefined) {
+        await locationStore.searchLocations(event.filter);
+      }
+    };
+
+    const onLocationLazyLoad = async (event) => {
+      console.log("Location lazy load event:", event);
+      if (locationStore.nextPage) {
+        await locationStore.loadMoreLocations();
       }
     };
 
@@ -199,8 +293,8 @@ export default {
       const reparationData = {
         reparation_number: reparationNumber.value,
         vehicle: selectedVehicle.value ? selectedVehicle.value.value : null,
-        driver: driver.value,
-        location: location.value,
+        driver: selectedDriver.value ? selectedDriver.value.value : null,
+        location: selectedLocation.value ? selectedLocation.value.value : null,
         odometer_reading: odometerReading.value,
         description: description.value,
         order_item_usages_write: orderItemUsages.value.map(usage => ({
@@ -223,8 +317,8 @@ export default {
     const clearForm = () => {
       reparationNumber.value = '';
       selectedVehicle.value = null;
-      driver.value = '';
-      location.value = '';
+      selectedDriver.value = null;
+      selectedLocation.value = null;
       odometerReading.value = null;
       description.value = '';
       product.value = null;
@@ -235,9 +329,11 @@ export default {
     return {
       reparationNumber,
       selectedVehicle,
+      selectedDriver,
+      selectedLocation,
       vehicleStore,
-      driver,
-      location,
+      driverStore,
+      locationStore,
       odometerReading,
       description,
       product,
@@ -248,7 +344,11 @@ export default {
       removeOrderItemUsage,
       submitReparation,
       onVehicleFilter,
-      onLazyLoad,
+      onVehicleLazyLoad,
+      onDriverFilter,
+      onDriverLazyLoad,
+      onLocationFilter,
+      onLocationLazyLoad,
     };
   },
 };
@@ -389,28 +489,38 @@ export default {
 }
 
 /* Dropdown specific styles */
-:deep(.vehicle-dropdown) {
+:deep(.vehicle-dropdown),
+:deep(.driver-dropdown),
+:deep(.location-dropdown) {
   width: 100%;
 }
 
-:deep(.vehicle-dropdown .p-dropdown-label) {
+:deep(.vehicle-dropdown .p-dropdown-label),
+:deep(.driver-dropdown .p-dropdown-label),
+:deep(.location-dropdown .p-dropdown-label) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   padding-right: 2.5rem; /* Make room for the dropdown arrow */
 }
 
-:deep(.vehicle-dropdown .p-dropdown-trigger) {
+:deep(.vehicle-dropdown .p-dropdown-trigger),
+:deep(.driver-dropdown .p-dropdown-trigger),
+:deep(.location-dropdown .p-dropdown-trigger) {
   width: 2.5rem;
 }
 
-.vehicle-option {
+.vehicle-option,
+.driver-option,
+.location-option {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.vehicle-option.selected {
+.vehicle-option.selected,
+.driver-option.selected,
+.location-option.selected {
   padding-right: 2.5rem; /* Make room for the clear button */
 }
 
