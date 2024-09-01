@@ -141,6 +141,38 @@
         </span>
       </div>
 
+      <div class="form-field">
+        <h3>Service Types</h3>
+        <PickList
+          v-model="serviceTypes"
+          listStyle="height:250px"
+          :showSourceControls="false"
+          :showTargetControls="false"
+          sourceHeader="Available Service Types"
+          targetHeader="Chosen Service Types"
+        >
+          <template #item="slotProps">
+            <div class="service-type-item">{{ slotProps.item.label }}</div>
+          </template>
+        </PickList>
+      </div>
+
+      <div class="form-field">
+        <h3>Intervenants</h3>
+        <PickList
+          v-model="intervenants"
+          listStyle="height:250px"
+          :showSourceControls="false"
+          :showTargetControls="false"
+          sourceHeader="Available Intervenants"
+          targetHeader="Chosen Intervenants"
+        >
+          <template #item="slotProps">
+            <div class="intervenant-item">{{ slotProps.item.name }}</div>
+          </template>
+        </PickList>
+      </div>
+
       <!-- OrderItemUsage fields -->
       <div v-if="orderItemUsageVisible" class="form-field">
         <h3>Order Item Usages</h3>
@@ -182,11 +214,13 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useReparationManagementStore } from '@/stores/reparationManagement';
 import { useVehicleStore } from '@/stores/vehicleStore';
 import { useDriverStore } from '@/stores/driverStore';
 import { useLocationStore } from '@/stores/locationStore';
+import { useIntervenantStore } from '@/stores/intervenantStore';
+import { useServiceTypeStore } from '@/stores/serviceTypeStore';
 import BarcodeScanner from '@/components/shared/BarcodeScanner.vue';
 import axios from 'axios';
 
@@ -210,51 +244,73 @@ export default {
     const vehicleStore = useVehicleStore();
     const driverStore = useDriverStore();
     const locationStore = useLocationStore();
+    const intervenantStore = useIntervenantStore();
+    const serviceTypeStore = useServiceTypeStore();
     const reparationStore = useReparationManagementStore();
 
+    const serviceTypes = ref([[], []]);
+    const intervenants = ref([[], []]);
+
     onMounted(async () => {
-      await vehicleStore.fetchVehicles();
-      await driverStore.fetchDrivers();
-      await locationStore.fetchLocations();
+      await Promise.all([
+        vehicleStore.fetchVehicles(),
+        driverStore.fetchDrivers(),
+        locationStore.fetchLocations(),
+        intervenantStore.fetchIntervenants(),
+        serviceTypeStore.fetchServiceTypes()
+      ]);
+
+      updateServiceTypes();
+      updateIntervenants();
     });
 
+    const updateServiceTypes = () => {
+      serviceTypes.value[0] = serviceTypeStore.serviceTypes;
+      serviceTypes.value[1] = []; // Reset target array
+    };
+
+    const updateIntervenants = () => {
+      intervenants.value[0] = intervenantStore.intervenants.map(intervenant => ({
+        name: intervenant.name,
+        value: intervenant.id
+      }));
+      intervenants.value[1] = []; // Reset target array
+    };
+
+    watch(() => serviceTypeStore.serviceTypes, updateServiceTypes);
+    watch(() => intervenantStore.intervenants, updateIntervenants);
+
     const onVehicleFilter = async (event) => {
-      console.log("Vehicle filter event:", event);
       if (event.filter !== undefined) {
         await vehicleStore.searchVehicles(event.filter);
       }
     };
 
     const onVehicleLazyLoad = async (event) => {
-      console.log("Vehicle lazy load event:", event);
       if (vehicleStore.nextPage) {
         await vehicleStore.loadMoreVehicles();
       }
     };
 
     const onDriverFilter = async (event) => {
-      console.log("Driver filter event:", event);
       if (event.filter !== undefined) {
         await driverStore.searchDrivers(event.filter);
       }
     };
 
     const onDriverLazyLoad = async (event) => {
-      console.log("Driver lazy load event:", event);
       if (driverStore.nextPage) {
         await driverStore.loadMoreDrivers();
       }
     };
 
     const onLocationFilter = async (event) => {
-      console.log("Location filter event:", event);
       if (event.filter !== undefined) {
         await locationStore.searchLocations(event.filter);
       }
     };
 
     const onLocationLazyLoad = async (event) => {
-      console.log("Location lazy load event:", event);
       if (locationStore.nextPage) {
         await locationStore.loadMoreLocations();
       }
@@ -297,6 +353,8 @@ export default {
         location: selectedLocation.value ? selectedLocation.value.value : null,
         odometer_reading: odometerReading.value,
         description: description.value,
+        service_type_ids: serviceTypes.value[1].map(st => st.value),
+        intervenant_ids: intervenants.value[1].map(intervenant => intervenant.value),
         order_item_usages_write: orderItemUsages.value.map(usage => ({
           sku: usage.orderItem.sku,
           usage_type: usage.usageType,
@@ -324,6 +382,8 @@ export default {
       product.value = null;
       orderItemUsageVisible.value = false;
       orderItemUsages.value = [];
+      updateServiceTypes();
+      updateIntervenants();
     };
 
     return {
@@ -334,11 +394,15 @@ export default {
       vehicleStore,
       driverStore,
       locationStore,
+      intervenantStore,
+      serviceTypeStore,
       odometerReading,
       description,
       product,
       orderItemUsageVisible,
       orderItemUsages,
+      serviceTypes,
+      intervenants,
       onBarcodeDetected,
       addOrderItemUsage,
       removeOrderItemUsage,
@@ -353,6 +417,7 @@ export default {
   },
 };
 </script>
+
 
 <style scoped>
 .reparation-form-container {
@@ -553,6 +618,40 @@ th, td {
 th {
   background-color: #f8f9fa;
   font-weight: 600;
+}
+
+/* Dropdown and PickList specific styles */
+:deep(.vehicle-dropdown),
+:deep(.driver-dropdown),
+:deep(.location-dropdown) {
+  width: 100%;
+}
+
+:deep(.p-picklist) {
+  display: flex;
+  justify-content: space-between;
+}
+
+:deep(.p-picklist-list) {
+  width: 100%;
+  max-width: 300px;
+}
+
+:deep(.p-picklist-header) {
+  background-color: #f8f9fa;
+  padding: 0.5rem;
+  font-weight: bold;
+}
+
+.service-type-item,
+.intervenant-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.service-type-item:last-child,
+.intervenant-item:last-child {
+  border-bottom: none;
 }
 
 /* Responsive design */

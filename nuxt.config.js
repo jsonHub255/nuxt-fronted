@@ -4,7 +4,7 @@ export default defineNuxtConfig({
   ],
   primevue: {
     components: {
-      include: ['Button', 'InputText', 'InputNumber', 'AutoComplete', 'Dropdown', 'Textarea']
+      include: ['Button', 'InputText', 'InputNumber', 'AutoComplete', 'Dropdown', 'Textarea', 'PickList']
     },
     directives: {
       include: ['Tooltip', 'Ripple']
