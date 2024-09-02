@@ -136,6 +136,13 @@
 
       <div class="form-field">
         <span class="p-float-label">
+          <InputText v-model="bc" id="bc" class="form-input" />
+          <label for="bc">BC (Bon de Commande)</label>
+        </span>
+      </div>
+
+      <div class="form-field">
+        <span class="p-float-label">
           <Textarea v-model="description" id="description" class="form-input" rows="3" autoResize />
           <label for="description">Description</label>
         </span>
@@ -236,6 +243,7 @@ export default {
     const selectedDriver = ref(null);
     const selectedLocation = ref(null);
     const odometerReading = ref(null);
+    const bc = ref('');
     const description = ref('');
     const product = ref(null);
     const orderItemUsageVisible = ref(false);
@@ -317,21 +325,36 @@ export default {
     };
 
     const onBarcodeDetected = async (ean13) => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/product-detail/${ean13}/`);
-        product.value = response.data;
+  try {
+    console.log(`Fetching product details for EAN13: ${ean13}`);
+    const response = await axios.get(`${API_BASE_URL}/product-detail/${ean13}/`);
+    console.log('Product details received:', response.data);
+    product.value = response.data;
 
-        orderItemUsageVisible.value = true;
-        orderItemUsages.value.push({
-          orderItem: product.value,
-          total_units_used: null,
-          usageType: 'total_units',
-        });
-      } catch (error) {
-        console.error('Error fetching product details:', error);
-        alert('Product not found.');
-      }
-    };
+    orderItemUsageVisible.value = true;
+    orderItemUsages.value.push({
+      orderItem: product.value,
+      total_units_used: null,
+      usageType: 'total_units',
+    });
+  } catch (error) {
+    console.error('Error fetching product details:', error);
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Error response:', error.response.data);
+      console.error('Error status:', error.response.status);
+      console.error('Error headers:', error.response.headers);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('Error request:', error.request);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error message:', error.message);
+    }
+    alert(`Product not found. Error: ${error.message}`);
+  }
+};
 
     const addOrderItemUsage = () => {
       orderItemUsages.value.push({
@@ -346,31 +369,57 @@ export default {
     };
 
     const submitReparation = async () => {
-      const reparationData = {
-        reparation_number: reparationNumber.value,
-        vehicle: selectedVehicle.value ? selectedVehicle.value.value : null,
-        driver: selectedDriver.value ? selectedDriver.value.value : null,
-        location: selectedLocation.value ? selectedLocation.value.value : null,
-        odometer_reading: odometerReading.value,
-        description: description.value,
-        service_type_ids: serviceTypes.value[1].map(st => st.value),
-        intervenant_ids: intervenants.value[1].map(intervenant => intervenant.value),
-        order_item_usages_write: orderItemUsages.value.map(usage => ({
-          sku: usage.orderItem.sku,
-          usage_type: usage.usageType,
-          total_units_used: usage.total_units_used,
-        })),
-      };
+  try {
+    // Basic form validation
+    if (!reparationNumber.value || !selectedVehicle.value || !selectedDriver.value || intervenants.value[1].length === 0) {
+      throw new Error('Please fill in all required fields.');
+    }
 
-      try {
-        await reparationStore.addReparation(reparationData);
-        clearForm();
-        alert('Reparation submitted successfully!');
-      } catch (error) {
-        console.error('Failed to submit reparation:', error);
-        alert('Failed to submit reparation. Please try again.');
-      }
+    const reparationData = {
+      reparation_number: reparationNumber.value,
+      vehicle: selectedVehicle.value ? selectedVehicle.value.value : null,
+      driver: selectedDriver.value ? selectedDriver.value.value : null,
+      location: selectedLocation.value ? selectedLocation.value.value : null,
+      odometer_reading: odometerReading.value,
+      bc: bc.value,
+      description: description.value,
+      service_type_ids: serviceTypes.value[1].map(st => st.value),
+      // intervenant_ids: intervenants.value[1].map(intervenant => intervenant.value),
+      intervenant_ids: intervenants.value[1].map(intervenant => intervenant.value),
+      order_item_usages_write: orderItemUsages.value.map(usage => ({
+        sku: usage.orderItem.sku,
+        usage_type: usage.usageType,
+        total_units_used: usage.total_units_used,
+      })),
     };
+
+    console.log('Submitting reparation data:', reparationData);
+    
+    const result = await reparationStore.addReparation(reparationData);
+    
+    console.log('Reparation submission result:', result);
+
+    if (result && result.id) {
+      clearForm();
+      alert('Reparation submitted successfully!');
+    } else {
+      throw new Error('Unexpected response format from server');
+    }
+  } catch (error) {
+    console.error('Failed to submit reparation:', error);
+    
+    let errorMessage = 'Failed to submit reparation. ';
+    if (error.response && error.response.data) {
+      errorMessage += `Server error: ${JSON.stringify(error.response.data)}`;
+    } else if (error.request) {
+      errorMessage += 'No response received from server.';
+    } else {
+      errorMessage += error.message || 'An unexpected error occurred.';
+    }
+    
+    alert(errorMessage);
+  }
+};
 
     const clearForm = () => {
       reparationNumber.value = '';
@@ -378,6 +427,7 @@ export default {
       selectedDriver.value = null;
       selectedLocation.value = null;
       odometerReading.value = null;
+      bc.value = '';
       description.value = '';
       product.value = null;
       orderItemUsageVisible.value = false;
@@ -396,6 +446,7 @@ export default {
       locationStore,
       intervenantStore,
       serviceTypeStore,
+      bc,
       odometerReading,
       description,
       product,

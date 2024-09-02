@@ -1,3 +1,4 @@
+// fronted_nuxt/stores/reparationManagement.js
 import { defineStore } from 'pinia';
 import { createReparation, getReparationById, updateReparation } from '@/services/reparationService';
 import { useProductManagementStore } from './productManagement';
@@ -14,15 +15,38 @@ export const useReparationManagementStore = defineStore('reparationManagement', 
         this.currentReparation = reparation;
       } catch (error) {
         console.error('Failed to fetch reparation:', error);
+        throw error;
       }
     },
     async addReparation(reparationData) {
       try {
+        console.log('Sending reparation data to server:', reparationData);
         const reparation = await createReparation(reparationData);
+        console.log('Received response from server:', reparation);
+        
+        if (!reparation || typeof reparation !== 'object') {
+          console.error('Unexpected response format:', reparation);
+          throw new Error('Unexpected response format from server');
+        }
+        
+        if (!reparation.id) {
+          console.error('Response missing id:', reparation);
+          throw new Error('Server response missing reparation id');
+        }
+        
         this.reparations.push(reparation);
         return reparation;
       } catch (error) {
-        console.error('Failed to add reparation:', error);
+        console.error('Error in addReparation:', error);
+        if (error.response) {
+          console.error('Server error response:', error.response.data);
+          throw new Error(`Server error: ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+          console.error('No response received:', error.request);
+          throw new Error('No response received from server');
+        } else {
+          throw error;
+        }
       }
     },
     async updateReparation(reparationId, reparationData) {
@@ -32,8 +56,10 @@ export const useReparationManagementStore = defineStore('reparationManagement', 
         if (index !== -1) {
           this.reparations[index] = updatedReparation;
         }
+        return updatedReparation;
       } catch (error) {
         console.error('Failed to update reparation:', error);
+        throw error;
       }
     },
     async scanAndAddProduct(sku) {
@@ -47,8 +73,10 @@ export const useReparationManagementStore = defineStore('reparationManagement', 
             total_units_used: 1,
           });
         }
+        return product;
       } catch (error) {
         console.error('Failed to scan and add product:', error);
+        throw error;
       }
     },
   },
