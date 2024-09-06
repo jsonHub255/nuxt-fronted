@@ -1,3 +1,4 @@
+<!-- fronted_nuxt/components/reparations/ReparationForm.vue -->
 <template>
   <div class="reparation-form-container">
     <div class="form-header">
